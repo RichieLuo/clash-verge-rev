@@ -282,12 +282,8 @@ fn collect_windows_app_candidates(candidates: &mut Vec<AppProxyCandidate>) {
         }
     }
 
-    for dir in windows_start_menu_dirs() {
-        collect_windows_shortcut_candidates(&dir, candidates);
-    }
-
     for dir in windows_program_dirs() {
-        collect_windows_exe_candidates(&dir, candidates, 3);
+        collect_windows_exe_candidates(&dir, candidates, 2);
     }
 }
 
@@ -310,82 +306,28 @@ fn known_windows_browser_paths() -> Vec<PathBuf> {
 }
 
 #[cfg(target_os = "windows")]
-fn windows_start_menu_dirs() -> Vec<PathBuf> {
-    [
-        env::var("ProgramData")
-            .ok()
-            .map(|value| PathBuf::from(value).join("Microsoft/Windows/Start Menu/Programs")),
-        env::var("AppData")
-            .ok()
-            .map(|value| PathBuf::from(value).join("Microsoft/Windows/Start Menu/Programs")),
-    ]
-    .into_iter()
-    .flatten()
-    .collect()
-}
-
-#[cfg(target_os = "windows")]
 fn windows_program_dirs() -> Vec<PathBuf> {
-    ["ProgramFiles", "ProgramFiles(x86)", "LocalAppData"]
-        .into_iter()
-        .filter_map(|key| env::var(key).ok().map(PathBuf::from))
-        .collect()
-}
-
-#[cfg(target_os = "windows")]
-fn collect_windows_shortcut_candidates(dir: &Path, candidates: &mut Vec<AppProxyCandidate>) {
-    if !dir.is_dir() {
-        return;
-    }
-
-    let Ok(entries) = std::fs::read_dir(dir) else {
-        return;
-    };
-
-    for entry in entries.filter_map(Result::ok) {
-        let path = entry.path();
-        if path.is_dir() {
-            collect_windows_shortcut_candidates(&path, candidates);
-            continue;
-        }
-
-        if !path
-            .extension()
-            .is_some_and(|extension| extension.eq_ignore_ascii_case("lnk"))
-        {
-            continue;
-        }
-
-        if let Some(target) = resolve_windows_shortcut_target(&path)
-            && let Some(candidate) = create_app_candidate(file_stem_name(&path), target, "start menu")
-        {
-            candidates.push(candidate);
+    let mut dirs = Vec::new();
+    for key in ["ProgramFiles", "ProgramFiles(x86)"] {
+        if let Ok(root) = env::var(key) {
+            dirs.push(PathBuf::from(root));
         }
     }
-}
-
-#[cfg(target_os = "windows")]
-fn resolve_windows_shortcut_target(path: &Path) -> Option<PathBuf> {
-    let escaped = path.to_string_lossy().replace('\'', "''");
-    let script = format!("$s=(New-Object -ComObject WScript.Shell).CreateShortcut('{escaped}');$s.TargetPath");
-    let output = Command::new("powershell")
-        .args(["-NoProfile", "-NonInteractive", "-Command", &script])
-        .output()
-        .ok()?;
-    if !output.status.success() {
-        return None;
+    if let Ok(root) = env::var("LocalAppData") {
+        dirs.extend([
+            PathBuf::from(&root).join("Programs"),
+            PathBuf::from(&root).join("Google"),
+            PathBuf::from(&root).join("Microsoft"),
+        ]);
     }
-    let target = std::string::String::from_utf8_lossy(&output.stdout).trim().to_owned();
-    if target.is_empty() {
-        None
-    } else {
-        Some(PathBuf::from(target))
-    }
+    dirs
 }
 
 #[cfg(target_os = "windows")]
 fn collect_windows_exe_candidates(dir: &Path, candidates: &mut Vec<AppProxyCandidate>, depth: u8) {
-    if depth == 0 || !dir.is_dir() {
+    const MAX_WINDOWS_CANDIDATES: usize = 240;
+
+    if depth == 0 || !dir.is_dir() || candidates.len() >= MAX_WINDOWS_CANDIDATES {
         return;
     }
 
@@ -394,6 +336,10 @@ fn collect_windows_exe_candidates(dir: &Path, candidates: &mut Vec<AppProxyCandi
     };
 
     for entry in entries.filter_map(Result::ok) {
+        if candidates.len() >= MAX_WINDOWS_CANDIDATES {
+            return;
+        }
+
         let path = entry.path();
         if path.is_dir() {
             collect_windows_exe_candidates(&path, candidates, depth - 1);

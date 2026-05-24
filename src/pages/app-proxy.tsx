@@ -24,7 +24,7 @@ import {
   alpha,
 } from '@mui/material'
 import { open } from '@tauri-apps/plugin-dialog'
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { BaseEmpty, BasePage } from '@/components/base'
@@ -84,10 +84,6 @@ const AppProxyPage = () => {
       setCandidateLoading(false)
     }
   }
-
-  useEffect(() => {
-    void refreshCandidates()
-  }, [])
 
   const updateApps = async (nextApps: IAppProxyItem[]) => {
     await patchVerge({ app_proxy_apps: nextApps })
@@ -231,7 +227,11 @@ const AppProxyPage = () => {
                 onClick={refreshCandidates}
                 sx={{ flexShrink: 0 }}
               >
-                {t('appProxy.page.actions.refresh')}
+                {t(
+                  candidates.length
+                    ? 'appProxy.page.actions.refresh'
+                    : 'appProxy.page.actions.scan',
+                )}
               </Button>
             </Stack>
 
@@ -245,7 +245,13 @@ const AppProxyPage = () => {
             >
               {filteredCandidates.length === 0 ? (
                 <Box sx={{ py: 3 }}>
-                  <BaseEmpty text={t('appProxy.page.candidates.empty')} />
+                  <BaseEmpty
+                    text={t(
+                      candidates.length
+                        ? 'appProxy.page.candidates.empty'
+                        : 'appProxy.page.candidates.ready',
+                    )}
+                  />
                 </Box>
               ) : (
                 filteredCandidates.map((candidate) => (

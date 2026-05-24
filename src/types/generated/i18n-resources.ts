@@ -14,6 +14,7 @@ export interface TranslationResources {
           launch: string
           refresh: string
           save: string
+          scan: string
         }
         argsNotice: string
         badges: {
@@ -23,6 +24,7 @@ export interface TranslationResources {
         }
         candidates: {
           empty: string
+          ready: string
         }
         dialogs: {
           executable: string

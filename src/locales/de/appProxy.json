@@ -5,6 +5,7 @@
     "argsNotice": "Launch arguments can be left empty. When needed, enter them like command-line arguments, for example --incognito or --profile-directory=\"Profile 1\". Wrap values containing spaces in double quotes.",
     "empty": "No apps added yet",
     "candidates": {
+      "ready": "Click scan apps to choose",
       "empty": "No matching apps found"
     },
     "dialogs": {
@@ -28,6 +29,7 @@
     },
     "actions": {
       "choose": "Choose app",
+      "scan": "Scan apps",
       "refresh": "Refresh",
       "add": "Add",
       "save": "Save",

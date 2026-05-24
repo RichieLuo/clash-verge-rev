@@ -5,6 +5,7 @@
     "argsNotice": "启动参数可以留空；需要传参时按命令行写法填写，例如 --incognito 或 --profile-directory=\"Profile 1\"。带空格的参数值请用双引号包住。",
     "empty": "还没有添加应用",
     "candidates": {
+      "ready": "点击扫描应用后选择",
       "empty": "没有找到匹配的应用"
     },
     "dialogs": {
@@ -28,6 +29,7 @@
     },
     "actions": {
       "choose": "选择应用",
+      "scan": "扫描应用",
       "refresh": "刷新",
       "add": "添加",
       "save": "保存",
