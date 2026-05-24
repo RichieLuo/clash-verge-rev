@@ -6,6 +6,7 @@
         "proxies": "Прокси",
         "profiles": "Профильләр",
         "connections": "Тоташулар",
+        "appProxy": "App Proxy",
         "rules": "Кагыйдәләр",
         "logs": "Логлар",
         "unlock": "Test",

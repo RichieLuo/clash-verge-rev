@@ -3,6 +3,7 @@ import ForkRightRoundedIcon from '@mui/icons-material/ForkRightRounded'
 import HomeRoundedIcon from '@mui/icons-material/HomeRounded'
 import LanguageRoundedIcon from '@mui/icons-material/LanguageRounded'
 import LockOpenRoundedIcon from '@mui/icons-material/LockOpenRounded'
+import RocketLaunchRoundedIcon from '@mui/icons-material/RocketLaunchRounded'
 import SettingsRoundedIcon from '@mui/icons-material/SettingsRounded'
 import SubjectRoundedIcon from '@mui/icons-material/SubjectRounded'
 import WifiRoundedIcon from '@mui/icons-material/WifiRounded'
@@ -18,6 +19,7 @@ import SettingsSvg from '@/assets/image/itemicon/settings.svg?react'
 import UnlockSvg from '@/assets/image/itemicon/unlock.svg?react'
 
 import Layout from './_layout'
+import AppProxyPage from './app-proxy'
 import ConnectionsPage from './connections'
 import HomePage from './home'
 import ProfilesPage from './profiles'
@@ -50,6 +52,12 @@ export const navItems = [
     path: '/connections',
     icon: [<LanguageRoundedIcon key="mui" />, <ConnectionsSvg key="svg" />],
     Component: ConnectionsPage,
+  },
+  {
+    label: 'layout.components.navigation.tabs.appProxy',
+    path: '/app-proxy',
+    icon: [<RocketLaunchRoundedIcon key="mui" />],
+    Component: AppProxyPage,
   },
   {
     label: 'layout.components.navigation.tabs.rules',

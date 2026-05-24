@@ -1,0 +1,40 @@
+{
+  "page": {
+    "title": "App Proxy",
+    "notice": "Apps launched here receive Clash proxy environment variables. Use TUN mode for apps that completely ignore proxy environment variables.",
+    "empty": "No apps added yet",
+    "dialogs": {
+      "executable": "Executable"
+    },
+    "form": {
+      "addTitle": "Add app",
+      "editTitle": "Edit app",
+      "name": "Name",
+      "path": "App path",
+      "args": "Launch arguments",
+      "isolatedBrowser": "Isolated browser instance"
+    },
+    "badges": {
+      "isolatedBrowser": "Isolated browser",
+      "proxied": "Proxied PID {{pid}}"
+    },
+    "actions": {
+      "choose": "Choose app",
+      "add": "Add",
+      "save": "Save",
+      "cancel": "Cancel",
+      "launch": "Launch through proxy",
+      "edit": "Edit",
+      "delete": "Delete"
+    },
+    "feedback": {
+      "pathRequired": "Choose an app path",
+      "nameRequired": "Enter an app name",
+      "added": "App added",
+      "updated": "App updated",
+      "deleted": "App deleted",
+      "launched": "{{name}} launched through proxy",
+      "launchFailed": "Failed to launch app"
+    }
+  }
+}

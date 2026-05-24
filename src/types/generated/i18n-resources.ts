@@ -3,6 +3,46 @@
 
 export interface TranslationResources {
   translation: {
+    appProxy: {
+      page: {
+        actions: {
+          add: string
+          cancel: string
+          choose: string
+          delete: string
+          edit: string
+          launch: string
+          save: string
+        }
+        badges: {
+          isolatedBrowser: string
+          proxied: string
+        }
+        dialogs: {
+          executable: string
+        }
+        empty: string
+        feedback: {
+          added: string
+          deleted: string
+          launched: string
+          launchFailed: string
+          nameRequired: string
+          pathRequired: string
+          updated: string
+        }
+        form: {
+          addTitle: string
+          args: string
+          editTitle: string
+          isolatedBrowser: string
+          name: string
+          path: string
+        }
+        notice: string
+        title: string
+      }
+    }
     connections: {
       components: {
         actions: {
@@ -184,6 +224,7 @@ export interface TranslationResources {
             unlock: string
           }
           tabs: {
+            appProxy: string
             connections: string
             home: string
             logs: string

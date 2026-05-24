@@ -257,6 +257,9 @@ pub struct IVerge {
 
     /// 启用外部控制器
     pub enable_external_controller: Option<bool>,
+
+    /// App proxy launcher entries
+    pub app_proxy_apps: Option<Vec<IVergeAppProxyItem>>,
 }
 
 #[derive(Default, Debug, Clone, Deserialize, Serialize)]
@@ -265,6 +268,15 @@ pub struct IVergeTestItem {
     pub name: Option<String>,
     pub icon: Option<String>,
     pub url: Option<String>,
+}
+
+#[derive(Default, Debug, Clone, Deserialize, Serialize)]
+pub struct IVergeAppProxyItem {
+    pub id: Option<String>,
+    pub name: Option<String>,
+    pub path: Option<String>,
+    pub args: Option<String>,
+    pub isolated_browser: Option<bool>,
 }
 
 #[derive(Default, Debug, Clone, Deserialize, Serialize)]
@@ -554,6 +566,7 @@ impl IVerge {
         patch!(enable_dns_settings);
         patch!(home_cards);
         patch!(enable_external_controller);
+        patch!(app_proxy_apps);
     }
 
     pub const fn get_singleton_port() -> u16 {

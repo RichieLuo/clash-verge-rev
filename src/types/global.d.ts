@@ -984,6 +984,15 @@ interface IVergeConfig {
   enable_hover_jump_navigator?: boolean
   hover_jump_navigator_delay?: number
   enable_external_controller?: boolean
+  app_proxy_apps?: IAppProxyItem[]
+}
+
+interface IAppProxyItem {
+  id: string
+  name: string
+  path: string
+  args?: string
+  isolated_browser?: boolean
 }
 
 interface IWebDavFile {

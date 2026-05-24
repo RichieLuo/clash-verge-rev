@@ -1,0 +1,40 @@
+{
+  "page": {
+    "title": "应用代理",
+    "notice": "从这里启动的应用会带上 Clash 代理环境变量。若应用完全忽略代理环境变量，请使用 TUN 模式接管流量。",
+    "empty": "还没有添加应用",
+    "dialogs": {
+      "executable": "可执行文件"
+    },
+    "form": {
+      "addTitle": "添加应用",
+      "editTitle": "编辑应用",
+      "name": "名称",
+      "path": "应用路径",
+      "args": "启动参数",
+      "isolatedBrowser": "浏览器独立实例"
+    },
+    "badges": {
+      "isolatedBrowser": "独立浏览器",
+      "proxied": "已代理启动 PID {{pid}}"
+    },
+    "actions": {
+      "choose": "选择应用",
+      "add": "添加",
+      "save": "保存",
+      "cancel": "取消",
+      "launch": "通过代理启动",
+      "edit": "编辑",
+      "delete": "删除"
+    },
+    "feedback": {
+      "pathRequired": "请选择应用路径",
+      "nameRequired": "请输入应用名称",
+      "added": "应用已添加",
+      "updated": "应用已更新",
+      "deleted": "应用已删除",
+      "launched": "{{name}} 已通过代理启动",
+      "launchFailed": "启动应用失败"
+    }
+  }
+}

@@ -334,6 +334,24 @@ export async function openCoreDir() {
   return invoke<void>('open_core_dir').catch((err) => showNotice.error(err))
 }
 
+export async function launchAppWithProxy(
+  path: string,
+  args?: string,
+  options?: {
+    appId?: string
+    appName?: string
+    isolatedBrowser?: boolean
+  },
+) {
+  return invoke<number>('launch_app_with_proxy', {
+    path,
+    args: args?.trim() ? args.trim() : null,
+    appId: options?.appId ?? null,
+    appName: options?.appName ?? null,
+    isolatedBrowser: options?.isolatedBrowser ?? false,
+  })
+}
+
 export async function openLogsDir() {
   return invoke<void>('open_logs_dir').catch((err) => showNotice.error(err))
 }

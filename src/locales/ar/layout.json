@@ -6,6 +6,7 @@
         "proxies": "الوكلاء",
         "profiles": "الملفات الشخصية",
         "connections": "الاتصالات",
+        "appProxy": "وكيل التطبيقات",
         "rules": "القواعد",
         "logs": "السجلات",
         "unlock": "Test",
