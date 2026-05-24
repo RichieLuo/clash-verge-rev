@@ -4,6 +4,7 @@ import {
   EditRounded,
   FolderOpenRounded,
   PlayArrowRounded,
+  RefreshRounded,
   SaveRounded,
 } from '@mui/icons-material'
 import {
@@ -23,12 +24,12 @@ import {
   alpha,
 } from '@mui/material'
 import { open } from '@tauri-apps/plugin-dialog'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { BaseEmpty, BasePage } from '@/components/base'
 import { useVerge } from '@/hooks/use-verge'
-import { launchAppWithProxy } from '@/services/cmds'
+import { launchAppWithProxy, listAppProxyCandidates } from '@/services/cmds'
 import { showNotice } from '@/services/notice-service'
 
 const createId = () => {
@@ -55,9 +56,38 @@ const AppProxyPage = () => {
   const { verge, patchVerge } = useVerge()
   const apps = useMemo(() => verge?.app_proxy_apps ?? [], [verge])
   const [form, setForm] = useState<IAppProxyItem>(emptyForm)
+  const [candidates, setCandidates] = useState<IAppProxyCandidate[]>([])
+  const [candidateQuery, setCandidateQuery] = useState('')
+  const [candidateLoading, setCandidateLoading] = useState(false)
   const [launchingId, setLaunchingId] = useState<string | null>(null)
   const [launchedApps, setLaunchedApps] = useState<Record<string, number>>({})
   const isEditing = Boolean(form.id)
+
+  const filteredCandidates = useMemo(() => {
+    const query = candidateQuery.trim().toLowerCase()
+    const filtered = query
+      ? candidates.filter((item) =>
+          `${item.name} ${item.path}`.toLowerCase().includes(query),
+        )
+      : candidates
+    return filtered.slice(0, 80)
+  }, [candidateQuery, candidates])
+
+  const refreshCandidates = async () => {
+    setCandidateLoading(true)
+    try {
+      const nextCandidates = await listAppProxyCandidates()
+      setCandidates(nextCandidates)
+    } catch (err) {
+      showNotice.error('appProxy.page.feedback.candidatesFailed', err)
+    } finally {
+      setCandidateLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    void refreshCandidates()
+  }, [])
 
   const updateApps = async (nextApps: IAppProxyItem[]) => {
     await patchVerge({ app_proxy_apps: nextApps })
@@ -75,6 +105,15 @@ const AppProxyPage = () => {
       ...prev,
       path: selected,
       name: prev.name || getFileName(selected),
+    }))
+  }
+
+  const selectCandidate = (candidate: IAppProxyCandidate) => {
+    setForm((prev) => ({
+      ...prev,
+      name: candidate.name,
+      path: candidate.path,
+      isolated_browser: candidate.is_browser || prev.isolated_browser,
     }))
   }
 
@@ -173,6 +212,95 @@ const AppProxyPage = () => {
               )}
             </Typography>
 
+            <Stack
+              direction={{ xs: 'column', sm: 'row' }}
+              spacing={1}
+              sx={{ alignItems: { xs: 'stretch', sm: 'center' } }}
+            >
+              <TextField
+                size="small"
+                fullWidth
+                label={t('appProxy.page.form.searchApps')}
+                value={candidateQuery}
+                onChange={(event) => setCandidateQuery(event.target.value)}
+              />
+              <Button
+                size="small"
+                startIcon={<RefreshRounded />}
+                disabled={candidateLoading}
+                onClick={refreshCandidates}
+                sx={{ flexShrink: 0 }}
+              >
+                {t('appProxy.page.actions.refresh')}
+              </Button>
+            </Stack>
+
+            <Box
+              sx={({ palette }) => ({
+                maxHeight: 220,
+                overflow: 'auto',
+                border: `1px solid ${palette.divider}`,
+                borderRadius: 1,
+              })}
+            >
+              {filteredCandidates.length === 0 ? (
+                <Box sx={{ py: 3 }}>
+                  <BaseEmpty text={t('appProxy.page.candidates.empty')} />
+                </Box>
+              ) : (
+                filteredCandidates.map((candidate) => (
+                  <Box
+                    key={candidate.path}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => selectCandidate(candidate)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') selectCandidate(candidate)
+                    }}
+                    sx={({ palette }) => ({
+                      px: 1.25,
+                      py: 1,
+                      cursor: 'pointer',
+                      borderBottom: `1px solid ${palette.divider}`,
+                      '&:last-of-type': { borderBottom: 0 },
+                      '&:hover': {
+                        bgcolor: alpha(palette.primary.main, 0.08),
+                      },
+                    })}
+                  >
+                    <Stack
+                      direction="row"
+                      spacing={1}
+                      sx={{ alignItems: 'center', minWidth: 0 }}
+                    >
+                      <Box sx={{ minWidth: 0, flex: 1 }}>
+                        <Typography noWrap sx={{ fontSize: 13, fontWeight: 700 }}>
+                          {candidate.name}
+                        </Typography>
+                        <Typography
+                          noWrap
+                          title={candidate.path}
+                          sx={({ palette }) => ({
+                            fontSize: 12,
+                            color: palette.text.secondary,
+                          })}
+                        >
+                          {candidate.path}
+                        </Typography>
+                      </Box>
+                      {candidate.is_browser && (
+                        <Chip
+                          size="small"
+                          label={t('appProxy.page.badges.browser')}
+                        />
+                      )}
+                      <Chip size="small" label={candidate.source} />
+                    </Stack>
+                  </Box>
+                ))
+              )}
+            </Box>
+
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
               <TextField
                 size="small"
@@ -187,6 +315,8 @@ const AppProxyPage = () => {
                 size="small"
                 fullWidth
                 label={t('appProxy.page.form.args')}
+                placeholder={t('appProxy.page.form.argsPlaceholder')}
+                helperText={t('appProxy.page.form.argsHelp')}
                 value={form.args}
                 onChange={(event) =>
                   setForm((prev) => ({ ...prev, args: event.target.value }))
@@ -231,6 +361,10 @@ const AppProxyPage = () => {
               }
               label={t('appProxy.page.form.isolatedBrowser')}
             />
+
+            <Alert severity="info" sx={{ borderRadius: 1 }}>
+              {t('appProxy.page.argsNotice')}
+            </Alert>
 
             <Stack direction="row" spacing={1} sx={{ justifyContent: 'flex-end' }}>
               {isEditing && (

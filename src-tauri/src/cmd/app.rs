@@ -2,10 +2,21 @@ use super::CmdResult;
 use crate::config::Config;
 use crate::core::autostart;
 use crate::{cmd::StringifyErr as _, feat, utils::dirs};
+use serde::Serialize;
 use smartstring::alias::String;
+use std::collections::HashSet;
+use std::env;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use tauri::{AppHandle, Manager as _};
+
+#[derive(Debug, Clone, Serialize)]
+pub struct AppProxyCandidate {
+    pub name: String,
+    pub path: String,
+    pub source: String,
+    pub is_browser: bool,
+}
 
 /// 打开应用程序所在目录
 #[tauri::command]
@@ -111,6 +122,21 @@ pub async fn copy_icon_file(path: String, icon_info: feat::IconInfo) -> CmdResul
     feat::copy_icon_file(path, icon_info).await
 }
 
+/// 获取可用于应用代理的本机应用候选列表
+#[tauri::command]
+pub fn list_app_proxy_candidates() -> Vec<AppProxyCandidate> {
+    let mut candidates = Vec::new();
+
+    #[cfg(target_os = "windows")]
+    collect_windows_app_candidates(&mut candidates);
+    #[cfg(target_os = "macos")]
+    collect_macos_app_candidates(&mut candidates);
+    #[cfg(target_os = "linux")]
+    collect_linux_app_candidates(&mut candidates);
+
+    dedupe_and_sort_app_candidates(candidates)
+}
+
 /// 使用 Clash 代理环境变量启动应用程序
 #[tauri::command]
 pub async fn launch_app_with_proxy(
@@ -184,6 +210,328 @@ fn resolve_launch_target(path: &Path) -> CmdResult<PathBuf> {
     }
 
     Ok(path.to_path_buf())
+}
+
+fn dedupe_and_sort_app_candidates(candidates: Vec<AppProxyCandidate>) -> Vec<AppProxyCandidate> {
+    let mut seen = HashSet::new();
+    let mut result = Vec::new();
+
+    for candidate in candidates {
+        let key = candidate.path.to_lowercase();
+        if seen.insert(key) {
+            result.push(candidate);
+        }
+    }
+
+    result.sort_by(|left, right| {
+        left.name
+            .to_lowercase()
+            .cmp(&right.name.to_lowercase())
+            .then_with(|| left.path.to_lowercase().cmp(&right.path.to_lowercase()))
+    });
+    result
+}
+
+fn create_app_candidate<N, P, S>(name: N, path: P, source: S) -> Option<AppProxyCandidate>
+where
+    N: Into<String>,
+    P: AsRef<Path>,
+    S: Into<String>,
+{
+    let path = path.as_ref();
+    if !path.exists() {
+        return None;
+    }
+
+    let name = name.into();
+    let path_text = path.to_string_lossy().into_owned();
+    Some(AppProxyCandidate {
+        is_browser: is_browser_name(&name) || is_browser_path(&path_text),
+        name,
+        path: path_text.into(),
+        source: source.into(),
+    })
+}
+
+fn file_stem_name(path: &Path) -> String {
+    path.file_stem()
+        .or_else(|| path.file_name())
+        .map(|value| value.to_string_lossy().into_owned())
+        .unwrap_or_else(|| "Application".into())
+        .into()
+}
+
+fn is_browser_name(name: &str) -> bool {
+    let lower = name.to_lowercase();
+    [
+        "chrome", "edge", "firefox", "brave", "vivaldi", "opera", "chromium", "browser", "safari",
+    ]
+    .iter()
+    .any(|keyword| lower.contains(keyword))
+}
+
+fn is_browser_path(path: &str) -> bool {
+    is_browser_name(path)
+}
+
+#[cfg(target_os = "windows")]
+fn collect_windows_app_candidates(candidates: &mut Vec<AppProxyCandidate>) {
+    for path in known_windows_browser_paths() {
+        if let Some(candidate) = create_app_candidate(file_stem_name(&path), path, "common") {
+            candidates.push(candidate);
+        }
+    }
+
+    for dir in windows_start_menu_dirs() {
+        collect_windows_shortcut_candidates(&dir, candidates);
+    }
+
+    for dir in windows_program_dirs() {
+        collect_windows_exe_candidates(&dir, candidates, 3);
+    }
+}
+
+#[cfg(target_os = "windows")]
+fn known_windows_browser_paths() -> Vec<PathBuf> {
+    let mut paths = Vec::new();
+    for base in ["ProgramFiles", "ProgramFiles(x86)", "LocalAppData"] {
+        if let Ok(root) = env::var(base) {
+            paths.extend([
+                PathBuf::from(&root).join("Google/Chrome/Application/chrome.exe"),
+                PathBuf::from(&root).join("Microsoft/Edge/Application/msedge.exe"),
+                PathBuf::from(&root).join("Mozilla Firefox/firefox.exe"),
+                PathBuf::from(&root).join("BraveSoftware/Brave-Browser/Application/brave.exe"),
+                PathBuf::from(&root).join("Vivaldi/Application/vivaldi.exe"),
+                PathBuf::from(&root).join("Opera/opera.exe"),
+            ]);
+        }
+    }
+    paths
+}
+
+#[cfg(target_os = "windows")]
+fn windows_start_menu_dirs() -> Vec<PathBuf> {
+    [
+        env::var("ProgramData")
+            .ok()
+            .map(|value| PathBuf::from(value).join("Microsoft/Windows/Start Menu/Programs")),
+        env::var("AppData")
+            .ok()
+            .map(|value| PathBuf::from(value).join("Microsoft/Windows/Start Menu/Programs")),
+    ]
+    .into_iter()
+    .flatten()
+    .collect()
+}
+
+#[cfg(target_os = "windows")]
+fn windows_program_dirs() -> Vec<PathBuf> {
+    ["ProgramFiles", "ProgramFiles(x86)", "LocalAppData"]
+        .into_iter()
+        .filter_map(|key| env::var(key).ok().map(PathBuf::from))
+        .collect()
+}
+
+#[cfg(target_os = "windows")]
+fn collect_windows_shortcut_candidates(dir: &Path, candidates: &mut Vec<AppProxyCandidate>) {
+    if !dir.is_dir() {
+        return;
+    }
+
+    let Ok(entries) = std::fs::read_dir(dir) else {
+        return;
+    };
+
+    for entry in entries.filter_map(Result::ok) {
+        let path = entry.path();
+        if path.is_dir() {
+            collect_windows_shortcut_candidates(&path, candidates);
+            continue;
+        }
+
+        if !path
+            .extension()
+            .is_some_and(|extension| extension.eq_ignore_ascii_case("lnk"))
+        {
+            continue;
+        }
+
+        if let Some(target) = resolve_windows_shortcut_target(&path)
+            && let Some(candidate) = create_app_candidate(file_stem_name(&path), target, "start menu")
+        {
+            candidates.push(candidate);
+        }
+    }
+}
+
+#[cfg(target_os = "windows")]
+fn resolve_windows_shortcut_target(path: &Path) -> Option<PathBuf> {
+    let escaped = path.to_string_lossy().replace('\'', "''");
+    let script = format!("$s=(New-Object -ComObject WScript.Shell).CreateShortcut('{escaped}');$s.TargetPath");
+    let output = Command::new("powershell")
+        .args(["-NoProfile", "-NonInteractive", "-Command", &script])
+        .output()
+        .ok()?;
+    if !output.status.success() {
+        return None;
+    }
+    let target = std::string::String::from_utf8_lossy(&output.stdout).trim().to_owned();
+    if target.is_empty() {
+        None
+    } else {
+        Some(PathBuf::from(target))
+    }
+}
+
+#[cfg(target_os = "windows")]
+fn collect_windows_exe_candidates(dir: &Path, candidates: &mut Vec<AppProxyCandidate>, depth: u8) {
+    if depth == 0 || !dir.is_dir() {
+        return;
+    }
+
+    let Ok(entries) = std::fs::read_dir(dir) else {
+        return;
+    };
+
+    for entry in entries.filter_map(Result::ok) {
+        let path = entry.path();
+        if path.is_dir() {
+            collect_windows_exe_candidates(&path, candidates, depth - 1);
+            continue;
+        }
+
+        if !path
+            .extension()
+            .is_some_and(|extension| extension.eq_ignore_ascii_case("exe"))
+        {
+            continue;
+        }
+
+        let name = file_stem_name(&path);
+        if should_skip_windows_exe(&name, &path) {
+            continue;
+        }
+
+        if let Some(candidate) = create_app_candidate(name, path, "program files") {
+            candidates.push(candidate);
+        }
+    }
+}
+
+#[cfg(target_os = "windows")]
+fn should_skip_windows_exe(name: &str, path: &Path) -> bool {
+    let lower_name = name.to_lowercase();
+    let lower_path = path.to_string_lossy().to_lowercase();
+
+    if lower_path.contains("\\windowsapps\\") || lower_path.contains("\\uninstall") {
+        return true;
+    }
+
+    [
+        "setup",
+        "install",
+        "unins",
+        "update",
+        "crash",
+        "helper",
+        "service",
+        "broker",
+        "notification",
+        "elevation",
+    ]
+    .iter()
+    .any(|keyword| lower_name.contains(keyword))
+}
+
+#[cfg(target_os = "macos")]
+fn collect_macos_app_candidates(candidates: &mut Vec<AppProxyCandidate>) {
+    let mut dirs = vec![PathBuf::from("/Applications")];
+    if let Some(home) = dirs_next::home_dir() {
+        dirs.push(home.join("Applications"));
+    }
+
+    for dir in dirs {
+        let Ok(entries) = std::fs::read_dir(dir) else {
+            continue;
+        };
+        for entry in entries.filter_map(Result::ok) {
+            let path = entry.path();
+            if !path
+                .extension()
+                .is_some_and(|extension| extension.eq_ignore_ascii_case("app"))
+            {
+                continue;
+            }
+            if let Some(candidate) = create_app_candidate(file_stem_name(&path), path, "applications") {
+                candidates.push(candidate);
+            }
+        }
+    }
+}
+
+#[cfg(target_os = "linux")]
+fn collect_linux_app_candidates(candidates: &mut Vec<AppProxyCandidate>) {
+    let mut desktop_dirs = vec![PathBuf::from("/usr/share/applications")];
+    if let Some(home) = dirs_next::home_dir() {
+        desktop_dirs.push(home.join(".local/share/applications"));
+    }
+
+    for dir in desktop_dirs {
+        let Ok(entries) = std::fs::read_dir(dir) else {
+            continue;
+        };
+        for entry in entries.filter_map(Result::ok) {
+            let path = entry.path();
+            if !path
+                .extension()
+                .is_some_and(|extension| extension.eq_ignore_ascii_case("desktop"))
+            {
+                continue;
+            }
+            if let Some(candidate) = parse_linux_desktop_entry(&path) {
+                candidates.push(candidate);
+            }
+        }
+    }
+}
+
+#[cfg(target_os = "linux")]
+fn parse_linux_desktop_entry(path: &Path) -> Option<AppProxyCandidate> {
+    use std::collections::HashMap;
+
+    let content = std::fs::read_to_string(path).ok()?;
+    let mut fields = HashMap::<&str, &str>::new();
+    for line in content.lines() {
+        if let Some((key, value)) = line.split_once('=') {
+            fields.insert(key.trim(), value.trim());
+        }
+    }
+
+    if fields.get("NoDisplay").is_some_and(|value| *value == "true") {
+        return None;
+    }
+
+    let name = fields.get("Name")?.to_string();
+    let exec = fields.get("Exec")?;
+    let exec = exec
+        .split_whitespace()
+        .find(|part| !part.starts_with('%'))?
+        .trim_matches('"');
+    let path = if exec.contains('/') {
+        PathBuf::from(exec)
+    } else {
+        find_linux_path_executable(exec)?
+    };
+    create_app_candidate(name, path, "applications")
+}
+
+#[cfg(target_os = "linux")]
+fn find_linux_path_executable(name: &str) -> Option<PathBuf> {
+    env::var_os("PATH").and_then(|paths| {
+        env::split_paths(&paths)
+            .map(|dir| dir.join(name))
+            .find(|path| path.exists())
+    })
 }
 
 #[cfg(target_os = "macos")]

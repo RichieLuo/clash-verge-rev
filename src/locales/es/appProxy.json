@@ -2,7 +2,11 @@
   "page": {
     "title": "App Proxy",
     "notice": "Apps launched here receive Clash proxy environment variables. Use TUN mode for apps that completely ignore proxy environment variables.",
+    "argsNotice": "Launch arguments can be left empty. When needed, enter them like command-line arguments, for example --incognito or --profile-directory=\"Profile 1\". Wrap values containing spaces in double quotes.",
     "empty": "No apps added yet",
+    "candidates": {
+      "empty": "No matching apps found"
+    },
     "dialogs": {
       "executable": "Executable"
     },
@@ -10,16 +14,21 @@
       "addTitle": "Add app",
       "editTitle": "Edit app",
       "name": "Name",
+      "searchApps": "Search local apps",
       "path": "App path",
       "args": "Launch arguments",
+      "argsPlaceholder": "For example --incognito",
+      "argsHelp": "Optional. Separate arguments with spaces and wrap values containing spaces in double quotes.",
       "isolatedBrowser": "Isolated browser instance"
     },
     "badges": {
+      "browser": "Browser",
       "isolatedBrowser": "Isolated browser",
       "proxied": "Proxied PID {{pid}}"
     },
     "actions": {
       "choose": "Choose app",
+      "refresh": "Refresh",
       "add": "Add",
       "save": "Save",
       "cancel": "Cancel",
@@ -34,7 +43,8 @@
       "updated": "App updated",
       "deleted": "App deleted",
       "launched": "{{name}} launched through proxy",
-      "launchFailed": "Failed to launch app"
+      "launchFailed": "Failed to launch app",
+      "candidatesFailed": "Failed to read app list"
     }
   }
 }

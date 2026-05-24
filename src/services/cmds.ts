@@ -352,6 +352,10 @@ export async function launchAppWithProxy(
   })
 }
 
+export async function listAppProxyCandidates() {
+  return invoke<IAppProxyCandidate[]>('list_app_proxy_candidates')
+}
+
 export async function openLogsDir() {
   return invoke<void>('open_logs_dir').catch((err) => showNotice.error(err))
 }

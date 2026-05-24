@@ -995,6 +995,13 @@ interface IAppProxyItem {
   isolated_browser?: boolean
 }
 
+interface IAppProxyCandidate {
+  name: string
+  path: string
+  source: string
+  is_browser: boolean
+}
+
 interface IWebDavFile {
   filename: string
   href: string

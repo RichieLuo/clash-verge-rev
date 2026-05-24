@@ -2,7 +2,11 @@
   "page": {
     "title": "应用代理",
     "notice": "从这里启动的应用会带上 Clash 代理环境变量。若应用完全忽略代理环境变量，请使用 TUN 模式接管流量。",
+    "argsNotice": "启动参数可以留空；需要传参时按命令行写法填写，例如 --incognito 或 --profile-directory=\"Profile 1\"。带空格的参数值请用双引号包住。",
     "empty": "还没有添加应用",
+    "candidates": {
+      "empty": "没有找到匹配的应用"
+    },
     "dialogs": {
       "executable": "可执行文件"
     },
@@ -10,16 +14,21 @@
       "addTitle": "添加应用",
       "editTitle": "编辑应用",
       "name": "名称",
+      "searchApps": "搜索本机应用",
       "path": "应用路径",
       "args": "启动参数",
+      "argsPlaceholder": "例如 --incognito",
+      "argsHelp": "可选。多个参数用空格分隔，带空格的值用双引号。",
       "isolatedBrowser": "浏览器独立实例"
     },
     "badges": {
+      "browser": "浏览器",
       "isolatedBrowser": "独立浏览器",
       "proxied": "已代理启动 PID {{pid}}"
     },
     "actions": {
       "choose": "选择应用",
+      "refresh": "刷新",
       "add": "添加",
       "save": "保存",
       "cancel": "取消",
@@ -34,7 +43,8 @@
       "updated": "应用已更新",
       "deleted": "应用已删除",
       "launched": "{{name}} 已通过代理启动",
-      "launchFailed": "启动应用失败"
+      "launchFailed": "启动应用失败",
+      "candidatesFailed": "读取应用列表失败"
     }
   }
 }

@@ -12,11 +12,17 @@ export interface TranslationResources {
           delete: string
           edit: string
           launch: string
+          refresh: string
           save: string
         }
+        argsNotice: string
         badges: {
+          browser: string
           isolatedBrowser: string
           proxied: string
+        }
+        candidates: {
+          empty: string
         }
         dialogs: {
           executable: string
@@ -24,6 +30,7 @@ export interface TranslationResources {
         empty: string
         feedback: {
           added: string
+          candidatesFailed: string
           deleted: string
           launched: string
           launchFailed: string
@@ -34,10 +41,13 @@ export interface TranslationResources {
         form: {
           addTitle: string
           args: string
+          argsHelp: string
+          argsPlaceholder: string
           editTitle: string
           isolatedBrowser: string
           name: string
           path: string
+          searchApps: string
         }
         notice: string
         title: string
