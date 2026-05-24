@@ -132,7 +132,7 @@ pub async fn launch_app_with_proxy(
     let ip = std::env::var("CLASH_VERGE_REV_IP")
         .ok()
         .filter(|value| !value.trim().is_empty())
-        .or_else(|| verge_cfg.proxy_host.clone())
+        .or_else(|| verge_cfg.proxy_host.as_ref().map(|value| value.to_string()))
         .unwrap_or_else(|| "127.0.0.1".into());
     let mixed_port = verge_cfg.verge_mixed_port.unwrap_or(7897);
     let http_proxy = format!("http://{ip}:{mixed_port}");
@@ -224,7 +224,7 @@ fn app_proxy_profile_dir(app_id: Option<&str>, app_name: Option<&str>) -> CmdRes
     Ok(dir)
 }
 
-fn split_command_args(args: &str) -> Vec<String> {
+fn split_command_args(args: &str) -> Vec<std::string::String> {
     let mut result = Vec::new();
     let mut current = std::string::String::new();
     let mut chars = args.chars().peekable();
