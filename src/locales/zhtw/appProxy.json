@@ -20,15 +20,21 @@
       "args": "启动参数",
       "argsPlaceholder": "例如 --incognito",
       "argsHelp": "可选。多个参数用空格分隔，带空格的值用双引号。",
-      "isolatedBrowser": "浏览器独立实例"
+      "isolatedBrowser": "浏览器独立实例",
+      "profilePath": "浏览器数据目录",
+      "profileHelp": "可选。用于把现有书签、扩展和登录状态复制到代理专用浏览器目录。",
+      "profileCloneHelp": "建议先关闭对应浏览器再克隆。克隆后代理实例会使用独立副本，不会影响普通浏览器。"
     },
     "badges": {
       "browser": "浏览器",
       "isolatedBrowser": "独立浏览器",
+      "profileSource": "可克隆数据",
       "proxied": "已代理启动 PID {{pid}}"
     },
     "actions": {
       "choose": "选择应用",
+      "chooseProfile": "选择浏览器数据目录",
+      "cloneProfile": "克隆浏览器数据",
       "scan": "扫描应用",
       "refresh": "刷新",
       "add": "添加",
@@ -46,7 +52,10 @@
       "deleted": "应用已删除",
       "launched": "{{name}} 已通过代理启动",
       "launchFailed": "启动应用失败",
-      "candidatesFailed": "读取应用列表失败"
+      "candidatesFailed": "读取应用列表失败",
+      "profilePathRequired": "请选择浏览器数据目录",
+      "profileCloned": "浏览器数据已克隆到代理实例",
+      "profileCloneFailed": "克隆浏览器数据失败"
     }
   }
 }

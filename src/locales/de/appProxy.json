@@ -20,15 +20,21 @@
       "args": "Launch arguments",
       "argsPlaceholder": "For example --incognito",
       "argsHelp": "Optional. Separate arguments with spaces and wrap values containing spaces in double quotes.",
-      "isolatedBrowser": "Isolated browser instance"
+      "isolatedBrowser": "Isolated browser instance",
+      "profilePath": "Browser data folder",
+      "profileHelp": "Optional. Used to copy existing bookmarks, extensions, and sign-in state into the proxied browser folder.",
+      "profileCloneHelp": "Close that browser before cloning. The proxied instance uses an independent copy and will not affect your normal browser."
     },
     "badges": {
       "browser": "Browser",
       "isolatedBrowser": "Isolated browser",
+      "profileSource": "Cloneable data",
       "proxied": "Proxied PID {{pid}}"
     },
     "actions": {
       "choose": "Choose app",
+      "chooseProfile": "Choose browser data folder",
+      "cloneProfile": "Clone browser data",
       "scan": "Scan apps",
       "refresh": "Refresh",
       "add": "Add",
@@ -46,7 +52,10 @@
       "deleted": "App deleted",
       "launched": "{{name}} launched through proxy",
       "launchFailed": "Failed to launch app",
-      "candidatesFailed": "Failed to read app list"
+      "candidatesFailed": "Failed to read app list",
+      "profilePathRequired": "Choose a browser data folder",
+      "profileCloned": "Browser data cloned into the proxied instance",
+      "profileCloneFailed": "Failed to clone browser data"
     }
   }
 }

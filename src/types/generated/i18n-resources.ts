@@ -9,6 +9,8 @@ export interface TranslationResources {
           add: string
           cancel: string
           choose: string
+          chooseProfile: string
+          cloneProfile: string
           delete: string
           edit: string
           launch: string
@@ -20,6 +22,7 @@ export interface TranslationResources {
         badges: {
           browser: string
           isolatedBrowser: string
+          profileSource: string
           proxied: string
         }
         candidates: {
@@ -38,6 +41,9 @@ export interface TranslationResources {
           launchFailed: string
           nameRequired: string
           pathRequired: string
+          profileCloned: string
+          profileCloneFailed: string
+          profilePathRequired: string
           updated: string
         }
         form: {
@@ -49,6 +55,9 @@ export interface TranslationResources {
           isolatedBrowser: string
           name: string
           path: string
+          profileCloneHelp: string
+          profileHelp: string
+          profilePath: string
           searchApps: string
         }
         notice: string

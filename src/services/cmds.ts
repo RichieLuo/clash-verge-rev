@@ -356,6 +356,20 @@ export async function listAppProxyCandidates() {
   return invoke<IAppProxyCandidate[]>('list_app_proxy_candidates')
 }
 
+export async function cloneAppProxyProfile(
+  sourcePath: string,
+  options?: {
+    appId?: string
+    appName?: string
+  },
+) {
+  return invoke<string>('clone_app_proxy_profile', {
+    sourcePath,
+    appId: options?.appId ?? null,
+    appName: options?.appName ?? null,
+  })
+}
+
 export async function openLogsDir() {
   return invoke<void>('open_logs_dir').catch((err) => showNotice.error(err))
 }

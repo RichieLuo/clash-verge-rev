@@ -144,6 +144,7 @@ mod app_init {
             cmd::open_app_log,
             cmd::open_core_log,
             cmd::list_app_proxy_candidates,
+            cmd::clone_app_proxy_profile,
             cmd::launch_app_with_proxy,
             cmd::get_portable_flag,
             cmd::get_network_interfaces,

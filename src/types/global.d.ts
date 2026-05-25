@@ -993,6 +993,7 @@ interface IAppProxyItem {
   path: string
   args?: string
   isolated_browser?: boolean
+  profile_path?: string
 }
 
 interface IAppProxyCandidate {
@@ -1000,6 +1001,7 @@ interface IAppProxyCandidate {
   path: string
   source: string
   is_browser: boolean
+  profile_path?: string
 }
 
 interface IWebDavFile {

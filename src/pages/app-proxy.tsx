@@ -6,6 +6,7 @@ import {
   PlayArrowRounded,
   RefreshRounded,
   SaveRounded,
+  SyncRounded,
 } from '@mui/icons-material'
 import {
   Alert,
@@ -29,7 +30,11 @@ import { useTranslation } from 'react-i18next'
 
 import { BaseEmpty, BasePage } from '@/components/base'
 import { useVerge } from '@/hooks/use-verge'
-import { launchAppWithProxy, listAppProxyCandidates } from '@/services/cmds'
+import {
+  cloneAppProxyProfile,
+  launchAppWithProxy,
+  listAppProxyCandidates,
+} from '@/services/cmds'
 import { showNotice } from '@/services/notice-service'
 
 const createId = () => {
@@ -49,6 +54,7 @@ const emptyForm = {
   path: '',
   args: '',
   isolated_browser: false,
+  profile_path: '',
 }
 
 const AppProxyPage = () => {
@@ -59,6 +65,7 @@ const AppProxyPage = () => {
   const [candidates, setCandidates] = useState<IAppProxyCandidate[]>([])
   const [candidateQuery, setCandidateQuery] = useState('')
   const [candidateLoading, setCandidateLoading] = useState(false)
+  const [profileCloning, setProfileCloning] = useState(false)
   const [launchingId, setLaunchingId] = useState<string | null>(null)
   const [launchedApps, setLaunchedApps] = useState<Record<string, number>>({})
   const isEditing = Boolean(form.id)
@@ -109,7 +116,23 @@ const AppProxyPage = () => {
       ...prev,
       name: candidate.name,
       path: candidate.path,
+      profile_path: candidate.profile_path ?? prev.profile_path,
       isolated_browser: candidate.is_browser || prev.isolated_browser,
+    }))
+  }
+
+  const selectProfilePath = async () => {
+    const selected = await open({
+      multiple: false,
+      directory: true,
+    })
+
+    if (typeof selected !== 'string') return
+
+    setForm((prev) => ({
+      ...prev,
+      profile_path: selected,
+      isolated_browser: true,
     }))
   }
 
@@ -133,6 +156,7 @@ const AppProxyPage = () => {
       path,
       args: form.args?.trim() || undefined,
       isolated_browser: form.isolated_browser,
+      profile_path: form.profile_path?.trim() || undefined,
     }
 
     const nextApps = isEditing
@@ -155,7 +179,36 @@ const AppProxyPage = () => {
       path: app.path,
       args: app.args ?? '',
       isolated_browser: app.isolated_browser ?? false,
+      profile_path: app.profile_path ?? '',
     })
+  }
+
+  const cloneProfile = async () => {
+    const sourcePath = form.profile_path?.trim()
+    const appName = form.name.trim() || getFileName(form.path)
+    const appId = form.id || createId()
+
+    if (!sourcePath) {
+      showNotice.error('appProxy.page.feedback.profilePathRequired')
+      return
+    }
+
+    if (!form.id) {
+      setForm((prev) => ({ ...prev, id: appId }))
+    }
+
+    setProfileCloning(true)
+    try {
+      await cloneAppProxyProfile(sourcePath, {
+        appId,
+        appName,
+      })
+      showNotice.success('appProxy.page.feedback.profileCloned')
+    } catch (err) {
+      showNotice.error('appProxy.page.feedback.profileCloneFailed', err)
+    } finally {
+      setProfileCloning(false)
+    }
   }
 
   const deleteApp = async (id: string) => {
@@ -368,6 +421,63 @@ const AppProxyPage = () => {
               label={t('appProxy.page.form.isolatedBrowser')}
             />
 
+            {form.isolated_browser && (
+              <Stack spacing={1}>
+                <TextField
+                  size="small"
+                  fullWidth
+                  label={t('appProxy.page.form.profilePath')}
+                  value={form.profile_path ?? ''}
+                  helperText={t('appProxy.page.form.profileHelp')}
+                  onChange={(event) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      profile_path: event.target.value,
+                    }))
+                  }
+                  slotProps={{
+                    input: {
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          <Tooltip title={t('appProxy.page.actions.chooseProfile')}>
+                            <IconButton
+                              edge="end"
+                              size="small"
+                              onClick={selectProfilePath}
+                            >
+                              <FolderOpenRounded fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                        </InputAdornment>
+                      ),
+                    },
+                  }}
+                />
+                <Stack
+                  direction={{ xs: 'column', sm: 'row' }}
+                  spacing={1}
+                  sx={{ alignItems: { xs: 'stretch', sm: 'center' } }}
+                >
+                  <Button
+                    size="small"
+                    startIcon={<SyncRounded />}
+                    disabled={profileCloning || !form.profile_path}
+                    onClick={cloneProfile}
+                  >
+                    {t('appProxy.page.actions.cloneProfile')}
+                  </Button>
+                  <Typography
+                    sx={({ palette }) => ({
+                      color: palette.text.secondary,
+                      fontSize: 12,
+                    })}
+                  >
+                    {t('appProxy.page.form.profileCloneHelp')}
+                  </Typography>
+                </Stack>
+              </Stack>
+            )}
+
             <Alert severity="info" sx={{ borderRadius: 1 }}>
               {t('appProxy.page.argsNotice')}
             </Alert>
@@ -443,6 +553,12 @@ const AppProxyPage = () => {
                       <Chip
                         size="small"
                         label={t('appProxy.page.badges.isolatedBrowser')}
+                      />
+                    )}
+                    {app.profile_path && (
+                      <Chip
+                        size="small"
+                        label={t('appProxy.page.badges.profileSource')}
                       />
                     )}
                     {launchedApps[app.id] && (

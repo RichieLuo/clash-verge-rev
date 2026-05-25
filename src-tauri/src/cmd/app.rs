@@ -16,6 +16,7 @@ pub struct AppProxyCandidate {
     pub path: String,
     pub source: String,
     pub is_browser: bool,
+    pub profile_path: Option<String>,
 }
 
 /// 打开应用程序所在目录
@@ -137,6 +138,31 @@ pub fn list_app_proxy_candidates() -> Vec<AppProxyCandidate> {
     dedupe_and_sort_app_candidates(candidates)
 }
 
+/// 将现有浏览器用户数据复制到应用代理专用目录
+#[tauri::command]
+pub async fn clone_app_proxy_profile(
+    source_path: String,
+    app_id: Option<String>,
+    app_name: Option<String>,
+) -> CmdResult<String> {
+    let source = PathBuf::from(source_path.as_str());
+    if !source.is_dir() {
+        return Err("Browser profile path does not exist".into());
+    }
+
+    let target = app_proxy_profile_dir(app_id.as_deref(), app_name.as_deref())?;
+    if same_path(&source, &target) {
+        return Err("Source and target profile paths are the same".into());
+    }
+
+    if target.exists() {
+        std::fs::remove_dir_all(&target).stringify_err()?;
+    }
+    std::fs::create_dir_all(&target).stringify_err()?;
+    copy_profile_dir(&source, &target).stringify_err()?;
+    Ok(target.to_string_lossy().into())
+}
+
 /// 使用 Clash 代理环境变量启动应用程序
 #[tauri::command]
 pub async fn launch_app_with_proxy(
@@ -248,9 +274,80 @@ where
     Some(AppProxyCandidate {
         is_browser: is_browser_name(&name) || is_browser_path(&path_text),
         name,
+        profile_path: infer_browser_profile_path(&path_text).map(|path| path.to_string_lossy().into()),
         path: path_text.into(),
         source: source.into(),
     })
+}
+
+fn infer_browser_profile_path(path: &str) -> Option<PathBuf> {
+    #[cfg(target_os = "windows")]
+    {
+        let local = env::var("LocalAppData").ok().map(PathBuf::from);
+        let lower = path.to_lowercase();
+        if lower.contains("google\\chrome") {
+            return local.map(|dir| dir.join("Google/Chrome/User Data"));
+        }
+        if lower.contains("microsoft\\edge") || lower.contains("msedge.exe") {
+            return local.map(|dir| dir.join("Microsoft/Edge/User Data"));
+        }
+        if lower.contains("brave") {
+            return local.map(|dir| dir.join("BraveSoftware/Brave-Browser/User Data"));
+        }
+        if lower.contains("vivaldi") {
+            return local.map(|dir| dir.join("Vivaldi/User Data"));
+        }
+        if lower.contains("opera") {
+            return env::var("AppData")
+                .ok()
+                .map(PathBuf::from)
+                .map(|dir| dir.join("Opera Software/Opera Stable"));
+        }
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        let home = dirs_next::home_dir();
+        let lower = path.to_lowercase();
+        if lower.contains("google chrome") {
+            return home.map(|dir| dir.join("Library/Application Support/Google/Chrome"));
+        }
+        if lower.contains("microsoft edge") {
+            return home.map(|dir| dir.join("Library/Application Support/Microsoft Edge"));
+        }
+        if lower.contains("brave browser") {
+            return home.map(|dir| dir.join("Library/Application Support/BraveSoftware/Brave-Browser"));
+        }
+        if lower.contains("vivaldi") {
+            return home.map(|dir| dir.join("Library/Application Support/Vivaldi"));
+        }
+        if lower.contains("opera") {
+            return home.map(|dir| dir.join("Library/Application Support/com.operasoftware.Opera"));
+        }
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        let home = dirs_next::home_dir();
+        let lower = path.to_lowercase();
+        if lower.contains("chrome") || lower.contains("google-chrome") {
+            return home.map(|dir| dir.join(".config/google-chrome"));
+        }
+        if lower.contains("chromium") {
+            return home.map(|dir| dir.join(".config/chromium"));
+        }
+        if lower.contains("microsoft-edge") || lower.contains("msedge") {
+            return home.map(|dir| dir.join(".config/microsoft-edge"));
+        }
+        if lower.contains("brave") {
+            return home.map(|dir| dir.join(".config/BraveSoftware/Brave-Browser"));
+        }
+        if lower.contains("vivaldi") {
+            return home.map(|dir| dir.join(".config/vivaldi"));
+        }
+    }
+
+    None
 }
 
 fn file_stem_name(path: &Path) -> String {
@@ -516,6 +613,77 @@ fn app_proxy_profile_dir(app_id: Option<&str>, app_name: Option<&str>) -> CmdRes
         .join(safe_name);
     std::fs::create_dir_all(&dir).stringify_err()?;
     Ok(dir)
+}
+
+fn same_path(left: &Path, right: &Path) -> bool {
+    let left = std::fs::canonicalize(left).unwrap_or_else(|_| left.to_path_buf());
+    let right = std::fs::canonicalize(right).unwrap_or_else(|_| right.to_path_buf());
+    left == right
+}
+
+fn copy_profile_dir(source: &Path, target: &Path) -> std::io::Result<()> {
+    for entry in std::fs::read_dir(source)? {
+        let entry = entry?;
+        let source_path = entry.path();
+        let file_name = entry.file_name();
+        let file_name_text = file_name.to_string_lossy();
+
+        if should_skip_profile_entry(&file_name_text, &source_path) {
+            continue;
+        }
+
+        let target_path = target.join(&file_name);
+        let file_type = entry.file_type()?;
+        if file_type.is_dir() {
+            std::fs::create_dir_all(&target_path)?;
+            copy_profile_dir(&source_path, &target_path)?;
+        } else if file_type.is_file() {
+            if let Some(parent) = target_path.parent() {
+                std::fs::create_dir_all(parent)?;
+            }
+            let _ = std::fs::copy(&source_path, &target_path);
+        }
+    }
+
+    Ok(())
+}
+
+fn should_skip_profile_entry(name: &str, path: &Path) -> bool {
+    let lower = name.to_lowercase();
+    if lower.starts_with("singleton") || lower == "lock" || lower.ends_with(".lock") {
+        return true;
+    }
+
+    if path.is_dir() {
+        return [
+            "cache",
+            "code cache",
+            "gpucache",
+            "grshadercache",
+            "shadercache",
+            "dawncache",
+            "crashpad",
+            "browsermetrics",
+            "safe browsing",
+            "optimization hints",
+            "component_crx_cache",
+            "pnacltranslationcache",
+            "swreporter",
+        ]
+        .iter()
+        .any(|skip| lower == *skip || lower.contains(skip));
+    }
+
+    [
+        "chrome_debug.log",
+        "debug.log",
+        "lockfile",
+        "last version",
+        "runningchromeversion",
+        "variations",
+    ]
+    .iter()
+    .any(|skip| lower == *skip)
 }
 
 fn split_command_args(args: &str) -> Vec<std::string::String> {
